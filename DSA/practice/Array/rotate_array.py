@@ -59,3 +59,54 @@ if __name__ == "__main__":
 
     # Print the rotated array
     print(' '.join(map(str, arr)))
+
+
+
+# Python Program to right rotate the array by d positions
+# using Juggling Algorithm
+
+from math import gcd
+
+# Function to rotate list
+def rotateArr(arr, d):
+    n = len(arr)
+
+    # Handle the case where d > size of array
+    d %= n
+
+    # Calculate the number of cycles in the rotation
+    cycles = gcd(n, d)
+
+    # Process each cycle
+    for i in range(cycles):
+
+        # Start index of current cycle
+        currIdx = i
+        currEle = arr[currIdx]
+
+        # Rotate elements till we reach the start of cycle
+        while True:
+            nextIdx = (currIdx + d) % n
+            nextEle = arr[nextIdx]
+
+            # Update the element at next index with the current element
+            arr[nextIdx] = currEle
+
+            # Update the current element to next element
+            currEle = nextEle
+
+            # Move to the next index
+            currIdx = nextIdx
+
+            if currIdx == i:
+                break
+
+if __name__ == "__main__":
+    arr = [1, 2, 3, 4, 5, 6]
+    d = 2
+
+    rotateArr(arr, d)
+
+    # Print the rotated list
+    for i in range(len(arr)):
+        print(arr[i], end=" ")
