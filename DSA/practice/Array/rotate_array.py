@@ -110,3 +110,31 @@ if __name__ == "__main__":
     # Print the rotated list
     for i in range(len(arr)):
         print(arr[i], end=" ")
+
+
+# Python Code to right rotate an array using Reversal Algorithm
+
+# Function to rotate an array by d elements to the right
+def rotateArr(arr, d):
+    n = len(arr)
+    
+    # Handle the case where d > size of array
+    d %= n
+
+    # Reverse the entire array
+    arr.reverse()
+    
+    # Reverse the first d elements
+    arr[:d] = reversed(arr[:d])
+
+    # Reverse the remaining n-d elements
+    arr[d:] = reversed(arr[d:])
+
+if __name__ == "__main__":
+    arr = [1, 2, 3, 4, 5, 6]
+    d = 2
+    
+    rotateArr(arr, d)
+    
+    for i in range(len(arr)):
+        print(arr[i], end=" ")
