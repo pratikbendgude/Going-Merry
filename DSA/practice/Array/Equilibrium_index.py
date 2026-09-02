@@ -22,3 +22,37 @@ if __name__ == '__main__':
     arr = [-7, 1, 5, 2, -4, 3, 0]
 
     print(findEquilibrium(arr))
+
+"""[Better Approach] Prefix Sum and Suffix Sum Array - O(n) Time and O(n) Space"""
+
+def findEquilibrium(arr):
+    n = len(arr)
+
+    pref = [0] * n
+    suff = [0] * n
+
+    # Initialize the ends of prefix
+    # and suffix array
+    pref[0] = arr[0]
+    suff[n - 1] = arr[n - 1]
+
+    # Calculate prefix sum for all indices
+    for i in range(1, n):
+        pref[i] = pref[i - 1] + arr[i]
+
+    # Calculating suffix sum for all indices
+    for i in range(n - 2, -1, -1):
+        suff[i] = suff[i + 1] + arr[i]
+
+    # Checking if prefix sum 
+    # is equal to suffix sum
+    for i in range(n):
+        if pref[i] == suff[i]:
+            return i
+
+    return -1
+  
+if __name__ == "__main__":
+    arr = [-7, 1, 5, 2, -4, 3, 0]
+
+    print(findEquilibrium(arr))
