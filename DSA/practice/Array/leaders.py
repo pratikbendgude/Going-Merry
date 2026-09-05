@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """intermidiate"""
 # Function to find the leaders in an array
 def leaders(arr):
