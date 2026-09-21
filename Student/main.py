@@ -18,3 +18,11 @@ def default(request: Request):
 @app.get("/students")
 def display_all():
     return data
+
+
+@app.get("/students/{id_no}")
+def display_one(id_no: int):
+    for info in data:
+        if info.get("id")==id_no:
+            return info
+    return "NO data found!!!"
