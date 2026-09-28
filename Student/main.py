@@ -61,7 +61,7 @@ def get_posts():
     return posts
 
 
-@app.post("/api/posts",response_class=PostResponse,status_code=status.HTTP_201_CREATED,)
+@app.post("/api/posts",response_model=PostResponse,status_code=status.HTTP_201_CREATED,)
 def create_post(post: PostCreate):
     new_id = max(p["id"] for p in posts) +1 if post else 1
     new_post = {
