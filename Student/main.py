@@ -1,36 +1,30 @@
 #!/usr/bin/env python3
 
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Request, status
+
+from fastapi import FastAPI, HTTPException, Request, Depends,status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from schemas import PostCreate, PostResponse
+from schemas import PostCreate, PostResponse, UserResponse,UserCreate
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+import models 
+from database import Base, engine, get_db
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+app.mount("/static", StaticFiles(directory="media"), name="media")
 templates = Jinja2Templates(directory="templates")
 
-posts: list[dict] = [
-    {
-        "id": 1,
-        "author": "Corey Schafer",
-        "title": "FastAPI is Awesome",
-        "content": "This framework is really easy to use and super fast.",
-        "date_posted": "April 20, 2025",
-    },
-    {
-        "id": 2,
-        "author": "Jane Doe",
-        "title": "Python is Great for Web Development",
-        "content": "Python is a great language for web development, and FastAPI makes it even better.",
-        "date_posted": "April 21, 2025",
-    },
-]
+
 
 
 @app.get("/", include_in_schema=False, name="home")
@@ -54,6 +48,34 @@ def post_page(request: Request, post_id: int):
                 {"post": post, "title": title},
             )
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+@app.post("/api/users",response_model=UserResponse,status_code=status.HTTP_201_CREATED,)
+def create_user(user: UserCreate, db: Annotated[Session,Depends(get_db)]):
+    result = db.execute(select(models.User).where(models.User.username == user.username))
+    existing_user = result.scalars().first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+
+    result = db.execute(select(models.User).where(models.User.email == user.email))
+    existing_email = result.scalars().first()
+    
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already exists"
+        )
+
+    new_user = models.User(
+        username=user.username,
+        email=user.email,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
 
 @app.get("/api/posts", response_model=list[PostResponse])
