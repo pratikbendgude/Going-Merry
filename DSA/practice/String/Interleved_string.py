@@ -113,3 +113,50 @@ if __name__ == "__main__":
     s2 = "AAC"
     s3 = "AAAABC"
     print("true" if isInterleave(s1, s2, s3) else "false")
+
+
+
+
+
+"""[Expected Approach] Space-Optimized DP - O(m*n) Time and O(m) Space"""
+
+def isInterleave(s1, s2, s3):
+    
+    # If lengths don't match, return false
+    if len(s1) + len(s2) != len(s3):
+        return False
+
+    n, m = len(s1), len(s2)
+
+    # Two rows for DP
+    prev = [False] * (m + 1)
+    curr = [False] * (m + 1)
+
+    # Base case
+    prev[0] = True
+
+    # Fill first row (s1 empty)
+    for j in range(1, m + 1):
+        prev[j] = prev[j - 1] and s2[j - 1] == s3[j - 1]
+
+    # Fill the DP rows
+    for i in range(1, n + 1):
+        # first column
+        curr[0] = prev[0] and s1[i - 1] == s3[i - 1]
+
+        for j in range(1, m + 1):
+            k = i + j
+            curr[j] = (prev[j] and s1[i - 1] == s3[k - 1]) or \
+                      (curr[j - 1] and s2[j - 1] == s3[k - 1])
+
+        # move current row to previous
+        prev = curr[:]
+
+    return prev[m]
+    
+    
+if __name__ == "__main__":
+    s1 = "AAB"
+    s2 = "AAC"
+    s3 = "AAABAC"
+    print("true" if isInterleave(s1, s2, s3) else "false")
