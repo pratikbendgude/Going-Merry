@@ -30,3 +30,45 @@ def countAnagramPairs(s):
 
 s = "abba"
 print(countAnagramPairs(s))
+
+
+
+
+"""[Expected Approach 1] Sorted Substring Hashing - O(n^3 log n) Time and O(n^3) Space"""
+from collections import defaultdict
+
+def countAnagramPairs(s):
+
+    n = len(s)
+    count = 0
+
+    # Map to store frequency of sorted substrings
+    freqMap = defaultdict(int)
+
+    # Generate all substrings
+    for i in range(n):
+        curr = ""
+
+        for j in range(i, n):
+            curr += s[j]
+
+            # Sort characters of the current substring
+            sortedStr = ''.join(sorted(curr))
+
+            # Increment count of this sorted pattern
+            freqMap[sortedStr] += 1
+
+    # Count total anagrammatic pairs from frequencies
+    for f in freqMap.values():
+
+        # Choose any 2 from f => f * (f - 1) / 2
+        if f > 1:
+            count += (f * (f - 1)) // 2
+
+    return count
+    
+if __name__ == "__main__":
+
+    s = "xyyx"
+
+    print(countAnagramPairs(s))
