@@ -72,3 +72,27 @@ if __name__ == "__main__":
     s = "xyyx"
 
     print(countAnagramPairs(s))
+
+
+
+"""[Expected Approach 2] Using Hash Map - O(n^2) Time and O(n^2) Space"""
+def countAnagramPairs(s):
+    n = len(s)
+    count = 0
+    mp = {}
+
+    for i in range(n):
+        freq = [0] * 26
+
+        for j in range(i, n):
+            freq[ord(s[j]) - ord('a')] += 1
+
+            key = tuple(freq)  
+
+            count += mp.get(key, 0)
+            mp[key] = mp.get(key, 0) + 1
+
+    return count
+
+s = "abba"
+print(countAnagramPairs(s))
