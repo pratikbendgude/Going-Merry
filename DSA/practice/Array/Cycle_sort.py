@@ -56,3 +56,39 @@ if __name__ == "__main__":
 
     for x in arr:
         print(x, end=" ")
+
+
+
+
+
+
+"""Cycle Sort for Range [1…N] or [0…N] - O(n) Time O(1) Space"""
+# Function to perform Cycle Sort 
+def cycleSort(arr):
+    
+    n = len(arr)
+    i = 0
+
+    # Traverse array
+    while i < n:
+        
+        # Correct index of current element
+        correct = arr[i] - 1
+
+        # If element is not at correct position, swap
+        if arr[i] != arr[correct]:
+            arr[i], arr[correct] = arr[correct], arr[i]
+        else:
+            
+            # Move to next index
+            i += 1
+
+
+if __name__ == "__main__":
+    arr = [3, 2, 4, 5, 1]
+    n = len(arr)
+
+    cycleSort(arr)
+
+    for i in range(n):
+        print(arr[i], end=" ")
