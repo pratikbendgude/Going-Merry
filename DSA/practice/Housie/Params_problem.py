@@ -32,6 +32,12 @@ Algorithm
 4. For every subsequent meeting:
    - If its start time is greater than or equal to the end time of the last selected meeting, select it.
 5. Print the total number selected.
+
+Complexity
+- Time: O(n log n), because of sorting.
+- Auxiliary space: O(n), for the meetings list.
+Important: The condition is s >= last_end, not s > last_end, because meetings are allowed to start exactly when another ends.
+Python tip: The default tuple sort would sort by start time first. Explicitly sorting with key=lambda meeting: meeting[1] ensures that the meetings are ordered by ending time
 """
 
 n = int(input())
