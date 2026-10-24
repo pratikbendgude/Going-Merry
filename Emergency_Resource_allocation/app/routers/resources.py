@@ -144,7 +144,7 @@ def update_ventilator_status(
 @router.get("/ambulances", response_model=List[AmbulanceSchema])
 def list_ambulances(
     hospital_id: Optional[int] = Query(None),
-    status: Optional[str] = Query(None, pattern="^(available|dispatched|returning)$"),
+    status: Optional[str] = Query(None, pattern="^(available|dispatched|returning|on_duty)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
@@ -187,7 +187,7 @@ def create_ambulance(ambulance: AmbulanceCreate, db: Session = Depends(get_db)):
 @router.patch("/ambulances/{ambulance_id}/status", response_model=AmbulanceSchema)
 def update_ambulance_status(
     ambulance_id: int,
-    new_status: str = Query(..., pattern="^(available|dispatched|returning)$"),
+    new_status: str = Query(..., pattern="^(available|dispatched|returning|on_duty)$"),
     db: Session = Depends(get_db),
 ):
     """Update ambulance status."""

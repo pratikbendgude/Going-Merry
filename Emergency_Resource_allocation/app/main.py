@@ -37,6 +37,13 @@ app.include_router(resources.router)
 app.include_router(emergency_cases.router)
 app.include_router(allocations.router)
 
+# Include routers with /api prefix for proxy compatibility
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(hospitals.router, prefix="/api")
+app.include_router(resources.router, prefix="/api")
+app.include_router(emergency_cases.router, prefix="/api")
+app.include_router(allocations.router, prefix="/api")
+
 
 @app.get("/")
 def root():

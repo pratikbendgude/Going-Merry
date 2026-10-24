@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app.models import Hospital, Bed, Ventilator, Ambulance
+from app.models import Hospital, Bed, Ventilator, Ambulance, EmergencyCase
 from app.schemas import (
     Hospital as HospitalSchema,
     HospitalCreate,
@@ -202,7 +202,7 @@ def delete_hospital(hospital_id: int, db: Session = Depends(get_db)):
 
     # Check for related records
     has_beds = db.query(Bed).filter(Bed.hospital_id == hospital_id).count() > 0
-    has_cases = db.query(Hospital).filter(Hospital.hospital_id == hospital_id).count() > 0
+    has_cases = db.query(EmergencyCase).filter(EmergencyCase.hospital_id == hospital_id).count() > 0
 
     if has_beds or has_cases:
         raise HTTPException(

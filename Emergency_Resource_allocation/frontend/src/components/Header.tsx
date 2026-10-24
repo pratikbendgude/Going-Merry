@@ -1,56 +1,82 @@
-import { Link } from 'react-router-dom';
-import { Menu, ChevronDown, Hospital, Bed, Syringe, ClipboardList } from 'lucide-react';
+import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Hospital, Menu, X } from 'lucide-react';
 
 export default function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/hospitals', label: 'Hospitals' },
+    { to: '/resources', label: 'Resources' },
+    { to: '/emergency-cases', label: 'Emergency Cases' },
+    { to: '/allocations', label: 'Allocations' },
+  ];
+
   return (
-    <header className="header bg-gradient-to-r from-blue-800 to-blue-900 text-white shadow-md">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center flex-wrap">
-          <div className="flex items-center space-x-3">
-            <Hospital className="h-8 w-8" />
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">
-                Emergency Resource Allocation
-              </h1>
-              <p className="text-sm opacity-80">
-                Hospital Emergency Management System
-              </p>
-            </div>
+    <header className="app-header">
+      <div className="header-inner">
+        {/* Brand identity */}
+        <NavLink to="/dashboard" className="brand-block">
+          <div className="brand-icon-box">
+            <Hospital className="h-5 w-5" />
           </div>
-          <nav className="hidden md:flex space-x-4">
-            <Link
-              to="/dashboard"
-              className="hover:text-blue-200 transition-colors px-3 py-2 rounded-md"
+          <div className="brand-text">
+            <div className="brand-title-row">
+              <span className="brand-title">Emergency Resource Allocation</span>
+              <span className="brand-live-badge">
+                <span className="brand-live-dot"></span>
+                LIVE OPS
+              </span>
+            </div>
+            <p className="brand-subtitle">Hospital Emergency Management System</p>
+          </div>
+        </NavLink>
+
+        {/* Desktop Navigation */}
+        <nav className="desktop-nav" aria-label="Main navigation">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `nav-link-item ${isActive ? 'active' : ''}`
+              }
             >
-              Dashboard
-            </Link>
-            <Link
-              to="/hospitals"
-              className="hover:text-blue-200 transition-colors px-3 py-2 rounded-md"
-            >
-              Hospitals
-            </Link>
-            <Link
-              to="/resources"
-              className="hover:text-blue-200 transition-colors px-3 py-2 rounded-md"
-            >
-              Resources
-            </Link>
-            <Link
-              to="/emergency-cases"
-              className="hover:text-blue-200 transition-colors px-3 py-2 rounded-md"
-            >
-              Emergency Cases
-            </Link>
-            <Link
-              to="/allocations"
-              className="hover:text-blue-200 transition-colors px-3 py-2 rounded-md"
-            >
-              Allocations
-            </Link>
-          </nav>
-        </div>
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Mobile menu hamburger toggle button */}
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="mobile-toggle-btn"
+          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
       </div>
+
+      {/* Mobile Navigation Dropdown */}
+      {mobileMenuOpen && (
+        <nav className="mobile-nav-panel" aria-label="Mobile navigation">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `mobile-nav-link ${isActive ? 'active' : ''}`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

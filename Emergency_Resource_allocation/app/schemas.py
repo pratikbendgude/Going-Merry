@@ -116,7 +116,7 @@ class EmergencyCase(EmergencyCaseBase):
 class AmbulanceBase(BaseModel):
     hospital_id: int
     vehicle_no: str = Field(..., min_length=1, max_length=20)
-    status: str = Field(default="available", pattern="^(available|dispatched|returning)$")
+    status: str = Field(default="available", pattern="^(available|dispatched|returning|on_duty)$")
 
 
 class AmbulanceCreate(AmbulanceBase):
@@ -156,7 +156,7 @@ class TransferBase(BaseModel):
     case_id: int
     ambulance_id: Optional[int] = None
     shortage_reason: Optional[str] = Field(None, max_length=100)
-    status: str = Field(default="requested", pattern="^(requested|in_transit|completed|cancelled)$")
+    status: str = Field(default="requested", pattern="^(requested|in_transit|in_progress|completed|cancelled)$")
 
 
 class TransferCreate(TransferBase):

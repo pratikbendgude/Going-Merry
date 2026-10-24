@@ -72,7 +72,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 
     # Transfer metrics
     pending_transfers = db.query(func.count(Transfer.transfer_id)).filter(
-        Transfer.status.in_(["requested", "in_transit"])
+        Transfer.status.in_(["requested", "in_transit", "in_progress"])
     ).scalar() or 0
 
     return DashboardMetrics(

@@ -55,7 +55,34 @@ export interface Ambulance {
     ambulance_id: number;
     hospital_id: number;
     vehicle_no: string;
-    status: 'available' | 'dispatched' | 'returning';
+    status: 'available' | 'dispatched' | 'returning' | 'on_duty';
+}
+export interface BloodUnit {
+    unit_id: number;
+    hospital_id: number;
+    blood_group: string;
+    status: 'in_stock' | 'issued' | 'expired';
+    expiry_date: string;
+    case_id?: number | null;
+    issued_at?: string | null;
+}
+export interface BedAllocation {
+    bed_id: number;
+    case_id: number;
+    allocated_at: string;
+    released_at: string | null;
+}
+export interface VentilatorAllocation {
+    ventilator_id: number;
+    case_id: number;
+    allocated_at: string;
+    released_at: string | null;
+}
+export interface AmbulanceDispatch {
+    ambulance_id: number;
+    case_id: number;
+    dispatched_at: string;
+    arrived_at: string | null;
 }
 export declare const api: {
     getDashboard: () => Promise<DashboardMetrics>;
@@ -69,31 +96,89 @@ export declare const api: {
         city?: string;
         trauma_level?: number;
     }) => Promise<HospitalWithResources[]>;
+    searchHospitals: (query: string) => Promise<Hospital[]>;
     createHospital: (data: Partial<Hospital>) => Promise<Hospital>;
     updateHospital: (id: number, data: Partial<Hospital>) => Promise<Hospital>;
+    deleteHospital: (id: number) => Promise<void>;
     getEmergencyCases: (params?: {
         hospital_id?: number;
         status?: string;
         triage_level?: string;
     }) => Promise<EmergencyCase[]>;
+    getEmergencyCasesWithParams: (params?: {
+        hospital_id?: number;
+        status?: string;
+        triage_level?: string;
+    }) => Promise<EmergencyCase[]>;
+    getEmergencyCase: (id: number) => Promise<EmergencyCase>;
     createEmergencyCase: (data: Partial<EmergencyCase>) => Promise<EmergencyCase>;
     updateEmergencyCase: (id: number, data: Partial<EmergencyCase>) => Promise<EmergencyCase>;
+    deleteEmergencyCase: (id: number) => Promise<void>;
     getBeds: (params?: {
         hospital_id?: number;
         status?: string;
         bed_type?: string;
     }) => Promise<Bed[]>;
+    getBedsWithParams: (params?: {
+        hospital_id?: number;
+        status?: string;
+        bed_type?: string;
+    }) => Promise<Bed[]>;
+    createBed: (data: {
+        bed_id: number;
+        hospital_id: number;
+        bed_type: string;
+        status?: string;
+    }) => Promise<Bed>;
+    updateBedStatus: (bedId: number, status: string) => Promise<Bed>;
     getVentilators: (params?: {
         hospital_id?: number;
         status?: string;
     }) => Promise<Ventilator[]>;
+    getVentilatorsWithParams: (params?: {
+        hospital_id?: number;
+        status?: string;
+    }) => Promise<Ventilator[]>;
+    createVentilator: (data: {
+        ventilator_id: number;
+        hospital_id: number;
+        status?: string;
+    }) => Promise<Ventilator>;
+    updateVentilatorStatus: (ventilatorId: number, status: string) => Promise<Ventilator>;
     getAmbulances: (params?: {
         hospital_id?: number;
         status?: string;
     }) => Promise<Ambulance[]>;
-    allocateBed: (bedId: number, caseId: number) => Promise<unknown>;
-    releaseBed: (bedId: number, caseId: number) => Promise<unknown>;
-    allocateVentilator: (ventilatorId: number, caseId: number) => Promise<unknown>;
-    releaseVentilator: (ventilatorId: number, caseId: number) => Promise<unknown>;
-    dispatchAmbulance: (ambulanceId: number, caseId: number) => Promise<unknown>;
+    getAmbulancesWithParams: (params?: {
+        hospital_id?: number;
+        status?: string;
+    }) => Promise<Ambulance[]>;
+    createAmbulance: (data: {
+        ambulance_id: number;
+        hospital_id: number;
+        vehicle_no: string;
+        status?: string;
+    }) => Promise<Ambulance>;
+    updateAmbulanceStatus: (ambulanceId: number, status: string) => Promise<Ambulance>;
+    getBloodUnits: (params?: {
+        hospital_id?: number;
+        blood_group?: string;
+        status?: string;
+    }) => Promise<BloodUnit[]>;
+    createBloodUnit: (data: {
+        unit_id: number;
+        hospital_id: number;
+        blood_group: string;
+        expiry_date: string;
+        status?: string;
+    }) => Promise<BloodUnit>;
+    allocateBed: (bedId: number, caseId: number) => Promise<BedAllocation>;
+    releaseBed: (bedId: number, caseId: number) => Promise<BedAllocation>;
+    getActiveBedAllocations: () => Promise<BedAllocation[]>;
+    allocateVentilator: (ventilatorId: number, caseId: number) => Promise<VentilatorAllocation>;
+    releaseVentilator: (ventilatorId: number, caseId: number) => Promise<VentilatorAllocation>;
+    getActiveVentilatorAllocations: () => Promise<VentilatorAllocation[]>;
+    dispatchAmbulance: (ambulanceId: number, caseId: number) => Promise<AmbulanceDispatch>;
+    markAmbulanceArrived: (ambulanceId: number, caseId: number) => Promise<AmbulanceDispatch>;
+    getActiveAmbulanceDispatches: () => Promise<AmbulanceDispatch[]>;
 };
