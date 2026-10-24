@@ -141,6 +141,10 @@ class BloodUnitCreate(BloodUnitBase):
     unit_id: int
 
 
+class BloodUnitIssueRequest(BaseModel):
+    case_id: int
+
+
 class BloodUnit(BloodUnitBase):
     unit_id: int
     case_id: Optional[int] = None
@@ -160,7 +164,7 @@ class TransferBase(BaseModel):
 
 
 class TransferCreate(TransferBase):
-    pass
+    transfer_id: Optional[int] = None
 
 
 class Transfer(TransferBase):

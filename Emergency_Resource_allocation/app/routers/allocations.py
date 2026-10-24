@@ -28,6 +28,8 @@ from app.schemas import (
     AmbulanceDispatchRequest,
     AmbulanceDispatchResponse,
 )
+from app.services.audit import log_audit
+from app.services.resource_tracker import sync_resource_availability
 
 router = APIRouter(prefix="/allocations", tags=["Allocations"])
 
@@ -83,6 +85,13 @@ def allocate_bed(
         # Update bed status
         bed.status = "occupied"
 
+        # Synchronize availability and audit log
+        sync_resource_availability(db, bed.hospital_id, "beds")
+        if bed.bed_type == "icu":
+            sync_resource_availability(db, bed.hospital_id, "icu_beds")
+        log_audit(db, bed.hospital_id, "bed_alloc", bed.bed_id, "INSERT")
+        log_audit(db, bed.hospital_id, "Beds", bed.bed_id, "UPDATE")
+
         # Commit transaction
         db.commit()
         db.refresh(db_allocation)
@@ -120,6 +129,11 @@ def release_bed(bed_id: int, case_id: int, db: Session = Depends(get_db)):
         bed = db.query(Bed).filter(Bed.bed_id == bed_id).with_for_update().first()
         if bed:
             bed.status = "available"
+            sync_resource_availability(db, bed.hospital_id, "beds")
+            if bed.bed_type == "icu":
+                sync_resource_availability(db, bed.hospital_id, "icu_beds")
+            log_audit(db, bed.hospital_id, "bed_alloc", bed.bed_id, "UPDATE")
+            log_audit(db, bed.hospital_id, "Beds", bed.bed_id, "UPDATE")
 
         db.commit()
         db.refresh(allocation)
@@ -194,6 +208,11 @@ def allocate_ventilator(
         # Update ventilator status
         ventilator.status = "in_use"
 
+        # Synchronize availability and audit log
+        sync_resource_availability(db, ventilator.hospital_id, "ventilators")
+        log_audit(db, ventilator.hospital_id, "vent_alloc", ventilator.ventilator_id, "INSERT")
+        log_audit(db, ventilator.hospital_id, "Ventilators", ventilator.ventilator_id, "UPDATE")
+
         # Commit transaction
         db.commit()
         db.refresh(db_allocation)
@@ -233,6 +252,9 @@ def release_ventilator(ventilator_id: int, case_id: int, db: Session = Depends(g
         ).with_for_update().first()
         if ventilator:
             ventilator.status = "available"
+            sync_resource_availability(db, ventilator.hospital_id, "ventilators")
+            log_audit(db, ventilator.hospital_id, "vent_alloc", ventilator.ventilator_id, "UPDATE")
+            log_audit(db, ventilator.hospital_id, "Ventilators", ventilator.ventilator_id, "UPDATE")
 
         db.commit()
         db.refresh(allocation)
@@ -307,6 +329,11 @@ def dispatch_ambulance(
         # Update ambulance status
         ambulance.status = "dispatched"
 
+        # Synchronize availability and audit log
+        sync_resource_availability(db, ambulance.hospital_id, "ambulances")
+        log_audit(db, ambulance.hospital_id, "dispatched", ambulance.ambulance_id, "INSERT")
+        log_audit(db, ambulance.hospital_id, "Ambulances", ambulance.ambulance_id, "UPDATE")
+
         # Commit transaction
         db.commit()
         db.refresh(db_dispatch)
@@ -346,6 +373,9 @@ def mark_ambulance_arrived(ambulance_id: int, case_id: int, db: Session = Depend
         ).with_for_update().first()
         if ambulance:
             ambulance.status = "available"
+            sync_resource_availability(db, ambulance.hospital_id, "ambulances")
+            log_audit(db, ambulance.hospital_id, "dispatched", ambulance.ambulance_id, "UPDATE")
+            log_audit(db, ambulance.hospital_id, "Ambulances", ambulance.ambulance_id, "UPDATE")
 
         db.commit()
         db.refresh(dispatch)

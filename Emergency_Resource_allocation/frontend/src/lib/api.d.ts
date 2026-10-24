@@ -84,6 +84,17 @@ export interface AmbulanceDispatch {
     dispatched_at: string;
     arrived_at: string | null;
 }
+export interface Transfer {
+    transfer_id: number;
+    from_hospital_id: number;
+    to_hospital_id: number;
+    case_id: number;
+    ambulance_id: number | null;
+    shortage_reason: string | null;
+    status: 'requested' | 'in_transit' | 'in_progress' | 'completed' | 'cancelled';
+    requested_at: string;
+    completed_at: string | null;
+}
 export declare const api: {
     getDashboard: () => Promise<DashboardMetrics>;
     getHospitals: (params?: {
@@ -172,6 +183,7 @@ export declare const api: {
         expiry_date: string;
         status?: string;
     }) => Promise<BloodUnit>;
+    issueBloodUnit: (unitId: number, caseId: number) => Promise<BloodUnit>;
     allocateBed: (bedId: number, caseId: number) => Promise<BedAllocation>;
     releaseBed: (bedId: number, caseId: number) => Promise<BedAllocation>;
     getActiveBedAllocations: () => Promise<BedAllocation[]>;
@@ -181,4 +193,22 @@ export declare const api: {
     dispatchAmbulance: (ambulanceId: number, caseId: number) => Promise<AmbulanceDispatch>;
     markAmbulanceArrived: (ambulanceId: number, caseId: number) => Promise<AmbulanceDispatch>;
     getActiveAmbulanceDispatches: () => Promise<AmbulanceDispatch[]>;
+    getTransfers: (params?: {
+        status?: string;
+        from_hospital_id?: number;
+        to_hospital_id?: number;
+        case_id?: number;
+    }) => Promise<Transfer[]>;
+    getTransfer: (id: number) => Promise<Transfer>;
+    createTransfer: (data: {
+        from_hospital_id: number;
+        to_hospital_id: number;
+        case_id: number;
+        ambulance_id?: number | null;
+        shortage_reason?: string;
+        status?: string;
+    }) => Promise<Transfer>;
+    startTransfer: (id: number) => Promise<Transfer>;
+    completeTransfer: (id: number) => Promise<Transfer>;
+    cancelTransfer: (id: number) => Promise<Transfer>;
 };

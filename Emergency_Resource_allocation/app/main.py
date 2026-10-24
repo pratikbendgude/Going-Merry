@@ -6,7 +6,7 @@ Emergency Resource Allocation System - FastAPI Application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import hospitals, resources, emergency_cases, allocations, dashboard
+from app.routers import hospitals, resources, emergency_cases, allocations, dashboard, transfers
 
 app = FastAPI(
     title="Emergency Resource Allocation System",
@@ -36,6 +36,7 @@ app.include_router(hospitals.router)
 app.include_router(resources.router)
 app.include_router(emergency_cases.router)
 app.include_router(allocations.router)
+app.include_router(transfers.router)
 
 # Include routers with /api prefix for proxy compatibility
 app.include_router(dashboard.router, prefix="/api")
@@ -43,6 +44,7 @@ app.include_router(hospitals.router, prefix="/api")
 app.include_router(resources.router, prefix="/api")
 app.include_router(emergency_cases.router, prefix="/api")
 app.include_router(allocations.router, prefix="/api")
+app.include_router(transfers.router, prefix="/api")
 
 
 @app.get("/")
@@ -58,6 +60,7 @@ def root():
             "resources": "/resources",
             "emergency_cases": "/emergency-cases",
             "allocations": "/allocations",
+            "transfers": "/transfers",
         }
     }
 

@@ -11,6 +11,7 @@ export default function Header() {
     { to: '/resources', label: 'Resources' },
     { to: '/emergency-cases', label: 'Emergency Cases' },
     { to: '/allocations', label: 'Allocations' },
+    { to: '/transfers', label: 'Transfers' },
   ];
 
   return (

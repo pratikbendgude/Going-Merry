@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, Bed as BedType, Ventilator, Ambulance, BloodUnit, Hospital } from '../lib/api';
+import { api, Bed as BedType, Ventilator, Ambulance, BloodUnit, Hospital, EmergencyCase } from '../lib/api';
 import { Bed, Activity, Ambulance as AmbulanceIcon, Droplet, Filter, X } from 'lucide-react';
 
 type ResourceType = 'beds' | 'ventilators' | 'ambulances' | 'blood_units';
@@ -11,11 +11,21 @@ export default function Resources() {
   const [statusFilter, setStatusFilter] = useState('');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Blood Unit Issuance state
+  const [issuingUnit, setIssuingUnit] = useState<BloodUnit | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('');
+  const [issueError, setIssueError] = useState<string>('');
+
   const queryClient = useQueryClient();
 
   const { data: hospitals = [] } = useQuery<Hospital[]>({
     queryKey: ['hospitals'],
     queryFn: () => api.getHospitals(),
+  });
+
+  const { data: emergencyCases = [] } = useQuery<EmergencyCase[]>({
+    queryKey: ['emergency-cases'],
+    queryFn: () => api.getEmergencyCases(),
   });
 
   const { data: beds = [], isLoading: bedsLoading } = useQuery<BedType[]>({
@@ -87,6 +97,21 @@ export default function Resources() {
       setNotification({ type: 'success', text: 'Ambulance status updated.' });
     },
     onError: (err: Error) => setNotification({ type: 'error', text: err.message }),
+  });
+
+  const issueBloodMutation = useMutation({
+    mutationFn: ({ unitId, caseId }: { unitId: number; caseId: number }) =>
+      api.issueBloodUnit(unitId, caseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['blood-units'] });
+      queryClient.invalidateQueries({ queryKey: ['emergency-cases'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setNotification({ type: 'success', text: 'Blood unit issued successfully to patient case.' });
+      setIssuingUnit(null);
+      setSelectedCaseId('');
+      setIssueError('');
+    },
+    onError: (err: Error) => setIssueError(err.message || 'Failed to issue blood unit'),
   });
 
   const isLoading = bedsLoading || ventLoading || ambLoading || bloodLoading;
@@ -263,7 +288,15 @@ export default function Resources() {
           )}
 
           {activeTab === 'blood_units' && (
-            <BloodUnitsTable bloodUnits={bloodUnits} hospitals={hospitals} />
+            <BloodUnitsTable
+              bloodUnits={bloodUnits}
+              hospitals={hospitals}
+              onIssueUnit={(unit) => {
+                setIssuingUnit(unit);
+                setSelectedCaseId('');
+                setIssueError('');
+              }}
+            />
           )}
 
           {/* Empty state properly grouped */}
@@ -276,6 +309,85 @@ export default function Resources() {
               <p className="empty-state-sub">Adjust your facility or status filter above.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Blood Unit Issuance Modal */}
+      {issuingUnit && (
+        <div className="modal-backdrop">
+          <div className="modal-container" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Issue Blood Unit #{issuingUnit.unit_id}</h3>
+                <p className="card-sub" style={{ marginTop: '0.25rem' }}>
+                  Group: <strong>{issuingUnit.blood_group}</strong> | Facility: {hospitals.find(h => h.hospital_id === issuingUnit.hospital_id)?.name || `#${issuingUnit.hospital_id}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setIssuingUnit(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="card-body">
+              {issueError && (
+                <div className="ops-banner ops-banner-critical" style={{ marginBottom: '1rem' }}>
+                  <span className="ops-banner-title">{issueError}</span>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="field-label" htmlFor="patient-case-select">Select Patient Emergency Case *</label>
+                <select
+                  id="patient-case-select"
+                  className="input"
+                  value={selectedCaseId}
+                  onChange={(e) => setSelectedCaseId(e.target.value)}
+                >
+                  <option value="">-- Choose Emergency Case --</option>
+                  {emergencyCases
+                    .filter((c) => c.status !== 'discharged')
+                    .map((c) => (
+                      <option key={c.case_id} value={c.case_id}>
+                        Case #{c.case_id} - {c.patient_name} ({c.triage_level.toUpperCase()} | {c.status})
+                      </option>
+                    ))}
+                </select>
+                <p className="field-hint">
+                  Unit expiry date: {issuingUnit.expiry_date}. Must not be expired.
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIssuingUnit(null)}
+                disabled={issueBloodMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!selectedCaseId || issueBloodMutation.isPending}
+                onClick={() => {
+                  if (selectedCaseId) {
+                    issueBloodMutation.mutate({
+                      unitId: issuingUnit.unit_id,
+                      caseId: Number(selectedCaseId),
+                    });
+                  }
+                }}
+              >
+                {issueBloodMutation.isPending ? 'Issuing...' : 'Confirm Issue'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -482,9 +594,11 @@ function AmbulancesTable({
 function BloodUnitsTable({
   bloodUnits,
   hospitals,
+  onIssueUnit,
 }: {
   bloodUnits: BloodUnit[];
   hospitals: Hospital[];
+  onIssueUnit: (unit: BloodUnit) => void;
 }) {
   const getHospitalName = (id: number) =>
     hospitals.find((h) => h.hospital_id === id)?.name || `Hospital #${id}`;
@@ -502,6 +616,7 @@ function BloodUnitsTable({
               <th>Hospital Blood Bank</th>
               <th>Expiration Date</th>
               <th>Inventory Status</th>
+              <th style={{ textAlign: 'right' }}>Patient Allocation</th>
             </tr>
           </thead>
           <tbody>
@@ -528,6 +643,26 @@ function BloodUnitsTable({
                   >
                     {unit.status.replace('_', ' ')}
                   </span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  {unit.status === 'in_stock' ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => onIssueUnit(unit)}
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                    >
+                      Issue to Case
+                    </button>
+                  ) : unit.status === 'issued' ? (
+                    <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                      Case #{unit.case_id}
+                    </span>
+                  ) : (
+                    <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                      Expired
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

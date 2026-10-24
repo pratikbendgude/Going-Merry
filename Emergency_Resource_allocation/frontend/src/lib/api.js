@@ -148,6 +148,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
     }),
+    issueBloodUnit: (unitId, caseId) => fetchAPI(`/resources/blood-units/${unitId}/issue`, {
+        method: 'POST',
+        body: JSON.stringify({ case_id: caseId }),
+    }),
     // Allocations
     allocateBed: (bedId, caseId) => fetchAPI('/allocations/beds', {
         method: 'POST',
@@ -173,4 +177,32 @@ export const api = {
         method: 'POST',
     }),
     getActiveAmbulanceDispatches: () => fetchAPI('/allocations/ambulances/active'),
+    // Transfers
+    getTransfers: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params?.status)
+            searchParams.append('status', params.status);
+        if (params?.from_hospital_id)
+            searchParams.append('from_hospital_id', String(params.from_hospital_id));
+        if (params?.to_hospital_id)
+            searchParams.append('to_hospital_id', String(params.to_hospital_id));
+        if (params?.case_id)
+            searchParams.append('case_id', String(params.case_id));
+        const query = searchParams.toString();
+        return fetchAPI(`/transfers${query ? `?${query}` : ''}`);
+    },
+    getTransfer: (id) => fetchAPI(`/transfers/${id}`),
+    createTransfer: (data) => fetchAPI('/transfers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    startTransfer: (id) => fetchAPI(`/transfers/${id}/start`, {
+        method: 'POST',
+    }),
+    completeTransfer: (id) => fetchAPI(`/transfers/${id}/complete`, {
+        method: 'POST',
+    }),
+    cancelTransfer: (id) => fetchAPI(`/transfers/${id}/cancel`, {
+        method: 'POST',
+    }),
 };

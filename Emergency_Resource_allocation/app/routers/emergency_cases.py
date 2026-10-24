@@ -6,6 +6,7 @@ Emergency Cases API endpoints.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models import EmergencyCase, Hospital
@@ -14,6 +15,7 @@ from app.schemas import (
     EmergencyCaseCreate,
     EmergencyCaseUpdate,
 )
+from app.services.audit import log_audit
 
 router = APIRouter(prefix="/emergency-cases", tags=["Emergency Cases"])
 
@@ -58,7 +60,12 @@ def create_emergency_case(case: EmergencyCaseCreate, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Hospital not found")
 
     db_case = EmergencyCase(**case.model_dump())
+    if db_case.case_id is None:
+        max_id = db.query(func.coalesce(func.max(EmergencyCase.case_id), 0)).scalar() or 0
+        db_case.case_id = max_id + 1
+
     db.add(db_case)
+    log_audit(db, db_case.hospital_id, "Emergency_Cases", db_case.case_id, "INSERT")
     db.commit()
     db.refresh(db_case)
     return db_case
@@ -79,6 +86,7 @@ def update_emergency_case(
     for field, value in update_data.items():
         setattr(db_case, field, value)
 
+    log_audit(db, db_case.hospital_id, "Emergency_Cases", db_case.case_id, "UPDATE")
     db.commit()
     db.refresh(db_case)
     return db_case
@@ -98,6 +106,7 @@ def delete_emergency_case(case_id: int, db: Session = Depends(get_db)):
             detail="Cannot delete emergency case with existing resource allocations. Release resources first."
         )
 
+    log_audit(db, db_case.hospital_id, "Emergency_Cases", db_case.case_id, "DELETE")
     db.delete(db_case)
     db.commit()
     return None

@@ -16,6 +16,7 @@ from app.schemas import (
     HospitalUpdate,
     HospitalWithResources,
 )
+from app.services.audit import log_audit
 
 router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
 
@@ -171,7 +172,11 @@ def get_hospital_resources(hospital_id: int, db: Session = Depends(get_db)):
 def create_hospital(hospital: HospitalCreate, db: Session = Depends(get_db)):
     """Create a new hospital."""
     db_hospital = Hospital(**hospital.model_dump())
+    if db_hospital.hospital_id is None:
+        max_id = db.query(func.coalesce(func.max(Hospital.hospital_id), 0)).scalar() or 0
+        db_hospital.hospital_id = max_id + 1
     db.add(db_hospital)
+    log_audit(db, db_hospital.hospital_id, "Hospitals", db_hospital.hospital_id, "INSERT")
     db.commit()
     db.refresh(db_hospital)
     return db_hospital
@@ -188,6 +193,7 @@ def update_hospital(hospital_id: int, hospital: HospitalUpdate, db: Session = De
     for field, value in update_data.items():
         setattr(db_hospital, field, value)
 
+    log_audit(db, hospital_id, "Hospitals", hospital_id, "UPDATE")
     db.commit()
     db.refresh(db_hospital)
     return db_hospital
@@ -210,6 +216,7 @@ def delete_hospital(hospital_id: int, db: Session = Depends(get_db)):
             detail="Cannot delete hospital with existing beds or cases. Remove related records first."
         )
 
+    log_audit(db, hospital_id, "Hospitals", hospital_id, "DELETE")
     db.delete(db_hospital)
     db.commit()
     return None

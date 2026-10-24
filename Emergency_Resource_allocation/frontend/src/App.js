@@ -6,6 +6,7 @@ import Hospitals from './pages/Hospitals';
 import Resources from './pages/Resources';
 import EmergencyCases from './pages/EmergencyCases';
 import Allocations from './pages/Allocations';
+import Transfers from './pages/Transfers';
 import Header from './components/Header';
 import './App.css';
 const queryClient = new QueryClient({
@@ -18,6 +19,6 @@ const queryClient = new QueryClient({
     },
 });
 function App() {
-    return (_jsx(QueryClientProvider, { client: queryClient, children: _jsx(BrowserRouter, { children: _jsxs("div", { className: "App", children: [_jsx(Header, {}), _jsx("main", { children: _jsxs(Routes, { children: [_jsx(Route, { path: "/", element: _jsx(Navigate, { replace: true, to: "/dashboard" }) }), _jsx(Route, { path: "/dashboard", element: _jsx(Dashboard, {}) }), _jsx(Route, { path: "/hospitals", element: _jsx(Hospitals, {}) }), _jsx(Route, { path: "/resources", element: _jsx(Resources, {}) }), _jsx(Route, { path: "/emergency-cases", element: _jsx(EmergencyCases, {}) }), _jsx(Route, { path: "/allocations", element: _jsx(Allocations, {}) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { replace: true, to: "/dashboard" }) })] }) })] }) }) }));
+    return (_jsx(QueryClientProvider, { client: queryClient, children: _jsx(BrowserRouter, { children: _jsxs("div", { className: "App", children: [_jsx(Header, {}), _jsx("main", { children: _jsxs(Routes, { children: [_jsx(Route, { path: "/", element: _jsx(Navigate, { replace: true, to: "/dashboard" }) }), _jsx(Route, { path: "/dashboard", element: _jsx(Dashboard, {}) }), _jsx(Route, { path: "/hospitals", element: _jsx(Hospitals, {}) }), _jsx(Route, { path: "/resources", element: _jsx(Resources, {}) }), _jsx(Route, { path: "/emergency-cases", element: _jsx(EmergencyCases, {}) }), _jsx(Route, { path: "/allocations", element: _jsx(Allocations, {}) }), _jsx(Route, { path: "/transfers", element: _jsx(Transfers, {}) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { replace: true, to: "/dashboard" }) })] }) })] }) }) }));
 }
 export default App;

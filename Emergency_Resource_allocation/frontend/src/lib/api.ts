@@ -120,6 +120,18 @@ export interface AmbulanceDispatch {
   arrived_at: string | null;
 }
 
+export interface Transfer {
+  transfer_id: number;
+  from_hospital_id: number;
+  to_hospital_id: number;
+  case_id: number;
+  ambulance_id: number | null;
+  shortage_reason: string | null;
+  status: 'requested' | 'in_transit' | 'in_progress' | 'completed' | 'cancelled';
+  requested_at: string;
+  completed_at: string | null;
+}
+
 // API Functions
 export const api = {
   // Dashboard
@@ -280,6 +292,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  issueBloodUnit: (unitId: number, caseId: number) =>
+    fetchAPI<BloodUnit>(`/resources/blood-units/${unitId}/issue`, {
+      method: 'POST',
+      body: JSON.stringify({ case_id: caseId }),
+    }),
+
   // Allocations
   allocateBed: (bedId: number, caseId: number) =>
     fetchAPI<BedAllocation>('/allocations/beds', {
@@ -322,4 +340,46 @@ export const api = {
 
   getActiveAmbulanceDispatches: () =>
     fetchAPI<AmbulanceDispatch[]>('/allocations/ambulances/active'),
+
+  // Transfers
+  getTransfers: (params?: { status?: string; from_hospital_id?: number; to_hospital_id?: number; case_id?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.from_hospital_id) searchParams.append('from_hospital_id', String(params.from_hospital_id));
+    if (params?.to_hospital_id) searchParams.append('to_hospital_id', String(params.to_hospital_id));
+    if (params?.case_id) searchParams.append('case_id', String(params.case_id));
+    const query = searchParams.toString();
+    return fetchAPI<Transfer[]>(`/transfers${query ? `?${query}` : ''}`);
+  },
+
+  getTransfer: (id: number) =>
+    fetchAPI<Transfer>(`/transfers/${id}`),
+
+  createTransfer: (data: {
+    from_hospital_id: number;
+    to_hospital_id: number;
+    case_id: number;
+    ambulance_id?: number | null;
+    shortage_reason?: string;
+    status?: string;
+  }) =>
+    fetchAPI<Transfer>('/transfers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  startTransfer: (id: number) =>
+    fetchAPI<Transfer>(`/transfers/${id}/start`, {
+      method: 'POST',
+    }),
+
+  completeTransfer: (id: number) =>
+    fetchAPI<Transfer>(`/transfers/${id}/complete`, {
+      method: 'POST',
+    }),
+
+  cancelTransfer: (id: number) =>
+    fetchAPI<Transfer>(`/transfers/${id}/cancel`, {
+      method: 'POST',
+    }),
 };

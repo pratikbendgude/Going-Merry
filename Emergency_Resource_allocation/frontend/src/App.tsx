@@ -5,6 +5,7 @@ import Hospitals from './pages/Hospitals';
 import Resources from './pages/Resources';
 import EmergencyCases from './pages/EmergencyCases';
 import Allocations from './pages/Allocations';
+import Transfers from './pages/Transfers';
 import Header from './components/Header';
 import './App.css';
 
@@ -32,6 +33,7 @@ function App() {
               <Route path="/resources" element={<Resources />} />
               <Route path="/emergency-cases" element={<EmergencyCases />} />
               <Route path="/allocations" element={<Allocations />} />
+              <Route path="/transfers" element={<Transfers />} />
               <Route path="*" element={<Navigate replace to="/dashboard" />} />
             </Routes>
           </main>
