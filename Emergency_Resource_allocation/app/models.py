@@ -6,9 +6,14 @@ Maps to existing emergency_db tables.
 
 from datetime import date, datetime
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.orm import relationship, declarative_base, validates
 
 Base = declarative_base()
+
+
+def utcnow_second() -> datetime:
+    """Return naive UTC datetime truncated to whole seconds for MySQL timestamp compatibility."""
+    return datetime.utcnow().replace(microsecond=0)
 
 
 class Hospital(Base):
@@ -148,12 +153,18 @@ class BedAllocation(Base):
 
     bed_id = Column(Integer, ForeignKey('Beds.bed_id'), primary_key=True)
     case_id = Column(Integer, ForeignKey('Emergency_Cases.case_id'), primary_key=True)
-    allocated_at = Column(DateTime, primary_key=True, default=datetime.utcnow)
+    allocated_at = Column(DateTime, primary_key=True, default=utcnow_second)
     released_at = Column(DateTime, nullable=True)
 
     # Relationships
     bed = relationship("Bed", back_populates="allocations")
     case = relationship("EmergencyCase", back_populates="bed_allocations")
+
+    @validates('allocated_at', 'released_at')
+    def validate_second_precision(self, key, value):
+        if isinstance(value, datetime):
+            return value.replace(microsecond=0)
+        return value
 
 
 class Dispatched(Base):
@@ -162,12 +173,18 @@ class Dispatched(Base):
 
     ambulance_id = Column(Integer, ForeignKey('Ambulances.ambulance_id'), primary_key=True)
     case_id = Column(Integer, ForeignKey('Emergency_Cases.case_id'), primary_key=True)
-    dispatched_at = Column(DateTime, primary_key=True, default=datetime.utcnow)
+    dispatched_at = Column(DateTime, primary_key=True, default=utcnow_second)
     arrived_at = Column(DateTime, nullable=True)
 
     # Relationships
     ambulance = relationship("Ambulance", back_populates="dispatches")
     case = relationship("EmergencyCase", back_populates="dispatches")
+
+    @validates('dispatched_at', 'arrived_at')
+    def validate_second_precision(self, key, value):
+        if isinstance(value, datetime):
+            return value.replace(microsecond=0)
+        return value
 
 
 class VentilatorAllocation(Base):
@@ -176,12 +193,18 @@ class VentilatorAllocation(Base):
 
     ventilator_id = Column(Integer, ForeignKey('Ventilators.ventilator_id'), primary_key=True)
     case_id = Column(Integer, ForeignKey('Emergency_Cases.case_id'), primary_key=True)
-    allocated_at = Column(DateTime, primary_key=True, default=datetime.utcnow)
+    allocated_at = Column(DateTime, primary_key=True, default=utcnow_second)
     released_at = Column(DateTime, nullable=True)
 
     # Relationships
     ventilator = relationship("Ventilator", back_populates="allocations")
     case = relationship("EmergencyCase", back_populates="ventilator_allocations")
+
+    @validates('allocated_at', 'released_at')
+    def validate_second_precision(self, key, value):
+        if isinstance(value, datetime):
+            return value.replace(microsecond=0)
+        return value
 
 
 class AuditLog(Base):

@@ -19,6 +19,7 @@ from app.models import (
     BedAllocation,
     VentilatorAllocation,
     Dispatched,
+    utcnow_second,
 )
 from app.schemas import (
     BedAllocationRequest,
@@ -78,7 +79,7 @@ def allocate_bed(
         db_allocation = BedAllocation(
             bed_id=allocation.bed_id,
             case_id=allocation.case_id,
-            allocated_at=datetime.utcnow(),
+            allocated_at=utcnow_second(),
         )
         db.add(db_allocation)
 
@@ -123,7 +124,7 @@ def release_bed(bed_id: int, case_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Active allocation not found")
 
         # Update allocation
-        allocation.released_at = datetime.utcnow()
+        allocation.released_at = utcnow_second()
 
         # Update bed status
         bed = db.query(Bed).filter(Bed.bed_id == bed_id).with_for_update().first()
@@ -201,7 +202,7 @@ def allocate_ventilator(
         db_allocation = VentilatorAllocation(
             ventilator_id=allocation.ventilator_id,
             case_id=allocation.case_id,
-            allocated_at=datetime.utcnow(),
+            allocated_at=utcnow_second(),
         )
         db.add(db_allocation)
 
@@ -244,7 +245,7 @@ def release_ventilator(ventilator_id: int, case_id: int, db: Session = Depends(g
             raise HTTPException(status_code=404, detail="Active allocation not found")
 
         # Update allocation
-        allocation.released_at = datetime.utcnow()
+        allocation.released_at = utcnow_second()
 
         # Update ventilator status
         ventilator = db.query(Ventilator).filter(
@@ -322,7 +323,7 @@ def dispatch_ambulance(
         db_dispatch = Dispatched(
             ambulance_id=dispatch.ambulance_id,
             case_id=dispatch.case_id,
-            dispatched_at=datetime.utcnow(),
+            dispatched_at=utcnow_second(),
         )
         db.add(db_dispatch)
 
@@ -365,7 +366,7 @@ def mark_ambulance_arrived(ambulance_id: int, case_id: int, db: Session = Depend
             raise HTTPException(status_code=404, detail="Active dispatch not found")
 
         # Update dispatch
-        dispatch.arrived_at = datetime.utcnow()
+        dispatch.arrived_at = utcnow_second()
 
         # Update ambulance status
         ambulance = db.query(Ambulance).filter(

@@ -164,6 +164,73 @@ class TestTransactionalAllocationsIsolated(unittest.TestCase):
         amb = self.db.query(Ambulance).filter(Ambulance.ambulance_id == 901).first()
         self.assertEqual(amb.status, "available")
 
+    def test_allocation_failure_does_not_leave_partial_state(self):
+        """Failed allocation must not alter bed status or insert allocation records."""
+        bed_before = self.db.query(Bed).filter(Bed.bed_id == 901).first().status
+        req = BedAllocationRequest(bed_id=901, case_id=9999)  # Non-existent case
+
+        with self.assertRaises(HTTPException):
+            allocate_bed(req, self.db)
+
+        # Bed status must remain 'available'
+        bed_after = self.db.query(Bed).filter(Bed.bed_id == 901).first().status
+        self.assertEqual(bed_before, bed_after)
+
+        # No allocation record should exist
+        alloc = self.db.query(BedAllocation).filter(BedAllocation.bed_id == 901).first()
+        self.assertIsNone(alloc)
+
+    def test_release_failure_does_not_leave_inconsistent_state(self):
+        """Releasing non-existent allocation raises 404 and leaves resources untouched."""
+        with self.assertRaises(HTTPException) as ctx:
+            release_bed(bed_id=901, case_id=901, db=self.db)
+        self.assertEqual(ctx.exception.status_code, 404)
+
+    def test_bed_allocation_second_precision_and_refresh(self):
+        """Verify bed allocation truncates microsecond and refreshes without InvalidRequestError."""
+        req = BedAllocationRequest(bed_id=901, case_id=901)
+        alloc = allocate_bed(req, self.db)
+        self.assertEqual(alloc.allocated_at.microsecond, 0)
+
+        # Refresh must succeed cleanly
+        self.db.refresh(alloc)
+        self.assertEqual(alloc.bed_id, 901)
+        self.assertEqual(alloc.case_id, 901)
+
+    def test_ventilator_allocation_second_precision_and_refresh(self):
+        """Verify ventilator allocation truncates microsecond and refreshes cleanly."""
+        req = VentilatorAllocationRequest(ventilator_id=901, case_id=901)
+        alloc = allocate_ventilator(req, self.db)
+        self.assertEqual(alloc.allocated_at.microsecond, 0)
+
+        self.db.refresh(alloc)
+        self.assertEqual(alloc.ventilator_id, 901)
+
+    def test_ambulance_dispatch_second_precision_and_refresh(self):
+        """Verify ambulance dispatch truncates microsecond and refreshes cleanly."""
+        req = AmbulanceDispatchRequest(ambulance_id=901, case_id=901)
+        disp = dispatch_ambulance(req, self.db)
+        self.assertEqual(disp.dispatched_at.microsecond, 0)
+
+        self.db.refresh(disp)
+        self.assertEqual(disp.ambulance_id, 901)
+
+    def test_composite_pk_model_microsecond_truncation(self):
+        """Verify models automatically enforce second-precision on timestamp composite keys."""
+        dt_with_micros = datetime(2026, 10, 25, 12, 34, 56, 789123)
+
+        b = BedAllocation(bed_id=1, case_id=1, allocated_at=dt_with_micros, released_at=dt_with_micros)
+        self.assertEqual(b.allocated_at.microsecond, 0)
+        self.assertEqual(b.released_at.microsecond, 0)
+
+        v = VentilatorAllocation(ventilator_id=1, case_id=1, allocated_at=dt_with_micros, released_at=dt_with_micros)
+        self.assertEqual(v.allocated_at.microsecond, 0)
+        self.assertEqual(v.released_at.microsecond, 0)
+
+        d = Dispatched(ambulance_id=1, case_id=1, dispatched_at=dt_with_micros, arrived_at=dt_with_micros)
+        self.assertEqual(d.dispatched_at.microsecond, 0)
+        self.assertEqual(d.arrived_at.microsecond, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

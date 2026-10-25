@@ -308,7 +308,7 @@ class TestTransfersAndServicesIsolated(unittest.TestCase):
         self.assertEqual(updated_rec.available_count, 1)
 
     # ==========================================
-    # Audit Logging Tests
+    # Audit Logging Tests & Regressions
     # ==========================================
     def test_audit_logging_and_rollback(self):
         """Audit log is recorded in transaction and rolls back if transaction aborts."""
@@ -333,6 +333,81 @@ class TestTransfersAndServicesIsolated(unittest.TestCase):
             .first()
         )
         self.assertIsNone(rb_entry, "Rolled back audit entry must not persist")
+
+    def test_three_audit_entries_in_one_session_distinct_ids(self):
+        """Regression test: calling log_audit multiple times before commit produces unique IDs."""
+        e1 = log_audit(self.db, 1, "TableA", 1, "INSERT")
+        e2 = log_audit(self.db, 1, "TableB", 2, "UPDATE")
+        e3 = log_audit(self.db, 1, "TableC", 3, "DELETE")
+
+        self.db.commit()
+
+        records = self.db.query(AuditLog).filter(
+            AuditLog.table_name.in_(["TableA", "TableB", "TableC"])
+        ).all()
+        self.assertEqual(len(records), 3)
+
+        ids = [r.log_id for r in records]
+        self.assertEqual(len(ids), len(set(ids)), f"Duplicate primary key generated: {ids}")
+
+    def test_bed_allocation_audit_sequence(self):
+        """Regression test for Error 1 & Error 2: two audit logs staged back-to-back receive distinct IDs."""
+        log_audit(self.db, 1, "bed_alloc", 101, "INSERT")
+        log_audit(self.db, 1, "Beds", 101, "UPDATE")
+
+        self.db.commit()
+
+        entries = self.db.query(AuditLog).filter(
+            AuditLog.table_name.in_(["bed_alloc", "Beds"])
+        ).all()
+        self.assertEqual(len(entries), 2)
+        self.assertNotEqual(entries[0].log_id, entries[1].log_id)
+
+    def test_transfer_completion_audit_sequence(self):
+        """Regression test for Error 3: transfer completion staging 5 audit records receives distinct IDs."""
+        log_audit(self.db, 2, "Emergency_Cases", 501, "UPDATE")
+        log_audit(self.db, 1, "Beds", 101, "UPDATE")
+        log_audit(self.db, 1, "Ventilators", 201, "UPDATE")
+        log_audit(self.db, 1, "Ambulances", 301, "UPDATE")
+        log_audit(self.db, 1, "Transfers", 1, "UPDATE")
+
+        self.db.commit()
+
+        records = self.db.query(AuditLog).all()
+        ids = [r.log_id for r in records]
+        self.assertEqual(len(ids), len(set(ids)), f"Duplicate keys in transfer audit sequence: {ids}")
+
+    def test_manual_fallback_distinct_ids_without_autoincrement(self):
+        """
+        Verify the staged-aware fallback path specifically when AUTO_INCREMENT is disabled
+        (simulating the live unmigrated MySQL schema).
+        """
+        import app.services.audit as audit_svc
+        # Temporarily force fallback mode (is_autoincrement_supported returns False)
+        orig_supported = audit_svc.is_autoincrement_supported
+        try:
+            audit_svc.is_autoincrement_supported = lambda db: False
+
+            e1 = log_audit(self.db, 1, "ManualFallbackA", 10, "INSERT")
+            e2 = log_audit(self.db, 1, "ManualFallbackB", 20, "UPDATE")
+            e3 = log_audit(self.db, 1, "ManualFallbackC", 30, "UPDATE")
+
+            # In fallback mode, IDs are assigned directly on instantiation
+            self.assertIsNotNone(e1.log_id)
+            self.assertIsNotNone(e2.log_id)
+            self.assertIsNotNone(e3.log_id)
+            self.assertEqual({e1.log_id, e2.log_id, e3.log_id}, {e1.log_id, e1.log_id + 1, e1.log_id + 2})
+
+            self.db.commit()
+
+            entries = self.db.query(AuditLog).filter(
+                AuditLog.table_name.like("ManualFallback%")
+            ).all()
+            self.assertEqual(len(entries), 3)
+            ids = [e.log_id for e in entries]
+            self.assertEqual(len(ids), len(set(ids)))
+        finally:
+            audit_svc.is_autoincrement_supported = orig_supported
 
 
 if __name__ == "__main__":

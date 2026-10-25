@@ -129,14 +129,38 @@ def sync_resource_availability(
         record.last_updated = datetime.utcnow()
         return record
     else:
-        # Create record safely with manual ID calculation if table lacks auto_increment
-        max_id = (
+        # Check if an existing record is already staged in the active session
+        staged_records = [
+            obj for obj in db.new
+            if isinstance(obj, ResourceAvailability)
+            and obj.hospital_id == hospital_id
+            and obj.resource_type == target_type
+        ]
+        if staged_records:
+            staged_rec = staged_records[0]
+            staged_rec.total_count = total
+            staged_rec.available_count = available
+            staged_rec.last_updated = datetime.utcnow()
+            return staged_rec
+
+        # Create record safely with staged-aware manual ID calculation if table lacks auto_increment
+        max_db_id = (
             db.query(func.coalesce(func.max(ResourceAvailability.availability_id), 0))
             .scalar()
             or 0
         )
+        staged_ids = [
+            obj.availability_id for obj in db.new
+            if isinstance(obj, ResourceAvailability) and getattr(obj, "availability_id", None) is not None
+        ]
+        identity_ids = [
+            obj.availability_id for obj in db.identity_map.values()
+            if isinstance(obj, ResourceAvailability) and getattr(obj, "availability_id", None) is not None
+        ]
+        next_avail_id = max([max_db_id] + staged_ids + identity_ids) + 1
+
         record = ResourceAvailability(
-            availability_id=max_id + 1,
+            availability_id=next_avail_id,
             hospital_id=hospital_id,
             resource_type=target_type,
             total_count=total,
