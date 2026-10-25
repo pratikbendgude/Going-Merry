@@ -4,7 +4,7 @@ SQLAlchemy models for Emergency Resource Allocation System.
 Maps to existing emergency_db tables.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base, validates
 
@@ -13,7 +13,7 @@ Base = declarative_base()
 
 def utcnow_second() -> datetime:
     """Return naive UTC datetime truncated to whole seconds for MySQL timestamp compatibility."""
-    return datetime.utcnow().replace(microsecond=0)
+    return datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
 class Hospital(Base):

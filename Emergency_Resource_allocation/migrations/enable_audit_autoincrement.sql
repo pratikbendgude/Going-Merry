@@ -11,16 +11,15 @@
 -- allocation across concurrent transactions, eliminating application-level race
 -- conditions and duplicate key collisions (Error 1062).
 --
--- PRE-MIGRATION INSPECTION (VERIFIED):
+-- PRE-MIGRATION INSPECTION:
 -- - Table schema: PRIMARY KEY (`log_id`), FOREIGN KEY (`hospital_id`) REFERENCES `Hospitals`
--- - Existing rows: 10 records (log_id 1 through 10)
--- - Current MAX(log_id): 10
+-- - Existing audit records are fully preserved.
 --
 -- SAFETY & INTEGRITY GUARANTEES:
--- - This migration alters the column definition in-place; it does NOT drop the table.
--- - All existing 10 audit records are fully preserved with their original IDs.
--- - The starting AUTO_INCREMENT value is set to 11 (MAX(log_id) + 1), avoiding
---   collisions with existing records and avoiding arbitrary counter jumps.
+-- - This migration alters the column definition in-place; it does NOT drop or recreate the table.
+-- - All existing audit records are fully preserved with their original IDs.
+-- - MySQL automatically sets AUTO_INCREMENT to MAX(log_id) + 1 upon modifying
+--   the column, preventing ID collisions with existing records.
 --
 -- DEPLOYMENT STATUS:
 -- - Prepared as a standalone, reviewable migration script.
@@ -30,7 +29,3 @@
 
 -- 1. Modify the primary key column to enable MySQL native AUTO_INCREMENT
 ALTER TABLE Audit_Logs MODIFY COLUMN log_id INT NOT NULL AUTO_INCREMENT;
-
--- 2. Explicitly align the auto-increment counter to the next valid sequential ID.
---    Based on verified MAX(log_id) = 10, next safe ID is 11.
-ALTER TABLE Audit_Logs AUTO_INCREMENT = 11;

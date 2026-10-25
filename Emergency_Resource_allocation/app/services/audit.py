@@ -27,7 +27,7 @@ from typing import Optional, Dict
 from sqlalchemy import func, inspect
 from sqlalchemy.orm import Session
 
-from app.models import AuditLog, Hospital
+from app.models import AuditLog, Hospital, utcnow_second
 
 # Cache auto_increment capability per database engine id
 _autoincrement_cache: Dict[int, bool] = {}
@@ -106,7 +106,7 @@ def log_audit(
     if norm_change not in ("INSERT", "UPDATE", "DELETE"):
         norm_change = "UPDATE"
 
-    now = datetime.utcnow()
+    now = utcnow_second()
 
     # Preferred Strategy: Native Database AUTO_INCREMENT
     if is_autoincrement_supported(db):

@@ -46,12 +46,12 @@ def allocate_bed(
     Uses database transaction to ensure concurrency safety.
     """
     try:
-        # Verify case exists
-        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == allocation.case_id).first()
+        # Verify case exists (acquire row lock first to protect case-level invariants)
+        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == allocation.case_id).with_for_update().first()
         if not case:
             raise HTTPException(status_code=404, detail="Emergency case not found")
 
-        # Verify bed exists and is available (with row lock)
+        # Verify bed exists and is available (acquire resource row lock second)
         bed = db.query(Bed).filter(Bed.bed_id == allocation.bed_id).with_for_update().first()
         if not bed:
             raise HTTPException(status_code=404, detail="Bed not found")
@@ -166,12 +166,12 @@ def allocate_ventilator(
     Uses database transaction to ensure concurrency safety.
     """
     try:
-        # Verify case exists
-        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == allocation.case_id).first()
+        # Verify case exists (acquire row lock first to protect case-level invariants)
+        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == allocation.case_id).with_for_update().first()
         if not case:
             raise HTTPException(status_code=404, detail="Emergency case not found")
 
-        # Verify ventilator exists and is available (with row lock)
+        # Verify ventilator exists and is available (acquire resource row lock second)
         ventilator = db.query(Ventilator).filter(
             Ventilator.ventilator_id == allocation.ventilator_id
         ).with_for_update().first()
@@ -287,12 +287,12 @@ def dispatch_ambulance(
     Uses database transaction to ensure concurrency safety.
     """
     try:
-        # Verify case exists
-        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == dispatch.case_id).first()
+        # Verify case exists (acquire row lock first to protect case-level invariants)
+        case = db.query(EmergencyCase).filter(EmergencyCase.case_id == dispatch.case_id).with_for_update().first()
         if not case:
             raise HTTPException(status_code=404, detail="Emergency case not found")
 
-        # Verify ambulance exists and is available (with row lock)
+        # Verify ambulance exists and is available (acquire resource row lock second)
         ambulance = db.query(Ambulance).filter(
             Ambulance.ambulance_id == dispatch.ambulance_id
         ).with_for_update().first()

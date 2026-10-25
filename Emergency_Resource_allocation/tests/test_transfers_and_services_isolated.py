@@ -25,6 +25,7 @@ from app.models import (
     Dispatched,
     ResourceAvailability,
     AuditLog,
+    utcnow_second,
 )
 from app.schemas import (
     TransferCreate,
@@ -121,7 +122,7 @@ class TestTransfersAndServicesIsolated(unittest.TestCase):
         # Assign bed and ventilator at source hospital
         bed = self.db.query(Bed).filter(Bed.bed_id == 101).first()
         bed.status = "occupied"
-        b_alloc = BedAllocation(bed_id=101, case_id=501, allocated_at=datetime.utcnow())
+        b_alloc = BedAllocation(bed_id=101, case_id=501, allocated_at=utcnow_second())
         self.db.add(b_alloc)
 
         # 1. Create transfer
@@ -227,20 +228,65 @@ class TestTransfersAndServicesIsolated(unittest.TestCase):
         self.assertEqual(amb.status, "available")
 
     def test_invalid_lifecycle_transition(self):
-        """Cannot complete or cancel twice."""
+        """Lifecycle transitions must follow requested -> in_progress -> completed."""
         t_req = TransferCreate(from_hospital_id=1, to_hospital_id=2, case_id=501)
         transfer = create_transfer(t_req, self.db)
-        complete_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(transfer.status, "requested")
 
-        # Attempt duplicate complete
+        # 1. Attempt complete directly from 'requested' (must fail)
+        with self.assertRaises(HTTPException) as ctx_req:
+            complete_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(ctx_req.exception.status_code, 400)
+        self.assertIn("Only 'in_progress' transfers can be completed", ctx_req.exception.detail)
+
+        # 2. Start transfer to reach in_progress
+        transfer = start_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(transfer.status, "in_progress")
+
+        # 3. Complete transfer from in_progress (must succeed)
+        transfer = complete_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(transfer.status, "completed")
+
+        # 4. Attempt duplicate complete
         with self.assertRaises(HTTPException) as ctx:
             complete_transfer(transfer.transfer_id, self.db)
         self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("already completed", ctx.exception.detail)
 
-        # Attempt cancel after complete
+        # 5. Attempt cancel after complete
         with self.assertRaises(HTTPException) as ctx2:
             cancel_transfer(transfer.transfer_id, self.db)
         self.assertEqual(ctx2.exception.status_code, 400)
+        self.assertIn("already completed", ctx2.exception.detail)
+
+    def test_cannot_complete_cancelled_transfer(self):
+        """A cancelled transfer cannot be completed."""
+        t_req = TransferCreate(from_hospital_id=1, to_hospital_id=2, case_id=501)
+        transfer = create_transfer(t_req, self.db)
+        cancelled = cancel_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(cancelled.status, "cancelled")
+
+        with self.assertRaises(HTTPException) as ctx:
+            complete_transfer(transfer.transfer_id, self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("already cancelled", ctx.exception.detail)
+
+    def test_create_transfer_mismatched_source_hospital_rejected(self):
+        """Case must belong to from_hospital_id."""
+        # Case 501 belongs to hospital 1, but we specify from_hospital_id=2
+        t_req = TransferCreate(from_hospital_id=2, to_hospital_id=1, case_id=501)
+        with self.assertRaises(HTTPException) as ctx:
+            create_transfer(t_req, self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("belongs to hospital 1", ctx.exception.detail)
+
+    def test_create_transfer_identical_source_destination_rejected(self):
+        """Source and destination hospitals cannot be identical."""
+        t_req = TransferCreate(from_hospital_id=1, to_hospital_id=1, case_id=501)
+        with self.assertRaises(HTTPException) as ctx:
+            create_transfer(t_req, self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("identical", ctx.exception.detail)
 
     # ==========================================
     # Blood Unit Issuing Tests

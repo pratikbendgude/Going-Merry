@@ -19,6 +19,7 @@ from app.models import (
     BedAllocation,
     VentilatorAllocation,
     Dispatched,
+    Transfer,
 )
 from app.schemas import (
     BedAllocationRequest,
@@ -32,6 +33,11 @@ from app.routers.allocations import (
     release_ventilator,
     dispatch_ambulance,
     mark_ambulance_arrived,
+)
+from app.routers.resources import (
+    update_bed_status,
+    update_ventilator_status,
+    update_ambulance_status,
 )
 
 
@@ -230,6 +236,89 @@ class TestTransactionalAllocationsIsolated(unittest.TestCase):
         d = Dispatched(ambulance_id=1, case_id=1, dispatched_at=dt_with_micros, arrived_at=dt_with_micros)
         self.assertEqual(d.dispatched_at.microsecond, 0)
         self.assertEqual(d.arrived_at.microsecond, 0)
+
+    # ==========================================
+    # Resource Status Consistency Tests
+    # ==========================================
+    def test_cannot_mark_bed_available_while_allocated(self):
+        """Manual status change to 'available' must be rejected if bed is actively allocated."""
+        req = BedAllocationRequest(bed_id=901, case_id=901)
+        allocate_bed(req, self.db)
+
+        # Attempt to manually mark bed available while active allocation exists
+        with self.assertRaises(HTTPException) as ctx:
+            update_bed_status(bed_id=901, new_status="available", db=self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("active allocation exists", ctx.exception.detail)
+
+        # Release allocation, then status update should succeed
+        release_bed(bed_id=901, case_id=901, db=self.db)
+        updated = update_bed_status(bed_id=901, new_status="available", db=self.db)
+        self.assertEqual(updated.status, "available")
+
+    def test_cannot_mark_ventilator_available_while_allocated(self):
+        """Manual status change to 'available' must be rejected if ventilator is actively allocated."""
+        req = VentilatorAllocationRequest(ventilator_id=901, case_id=901)
+        allocate_ventilator(req, self.db)
+
+        with self.assertRaises(HTTPException) as ctx:
+            update_ventilator_status(ventilator_id=901, new_status="available", db=self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("active allocation exists", ctx.exception.detail)
+
+        release_ventilator(ventilator_id=901, case_id=901, db=self.db)
+        updated = update_ventilator_status(ventilator_id=901, new_status="available", db=self.db)
+        self.assertEqual(updated.status, "available")
+
+    def test_cannot_mark_ambulance_available_while_dispatched(self):
+        """Manual status change to 'available' must be rejected if ambulance has active dispatch."""
+        req = AmbulanceDispatchRequest(ambulance_id=901, case_id=901)
+        dispatch_ambulance(req, self.db)
+
+        with self.assertRaises(HTTPException) as ctx:
+            update_ambulance_status(ambulance_id=901, new_status="available", db=self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("active dispatch exists", ctx.exception.detail)
+
+        mark_ambulance_arrived(ambulance_id=901, case_id=901, db=self.db)
+        updated = update_ambulance_status(ambulance_id=901, new_status="available", db=self.db)
+        self.assertEqual(updated.status, "available")
+
+    def test_cannot_mark_ambulance_available_while_in_active_transfer(self):
+        """Manual status change to 'available' must be rejected if ambulance is in active transfer."""
+        t = Transfer(
+            transfer_id=888,
+            from_hospital_id=999,
+            to_hospital_id=999,
+            case_id=901,
+            ambulance_id=901,
+            status="in_progress",
+        )
+        self.db.add(t)
+        self.db.commit()
+
+        with self.assertRaises(HTTPException) as ctx:
+            update_ambulance_status(ambulance_id=901, new_status="available", db=self.db)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("assigned to active transfer", ctx.exception.detail)
+
+    def test_composite_pk_same_second_collision_limitation(self):
+        """
+        Documents the known limitation of timestamp composite PK (bed_id, case_id, allocated_at):
+        If the same bed is allocated, released, and re-allocated to the same case within the exact
+        same second, the second insert generates an identical primary key, raising an IntegrityError.
+        """
+        from sqlalchemy.exc import IntegrityError
+        dt = datetime(2026, 10, 25, 12, 0, 0)
+        b1 = BedAllocation(bed_id=901, case_id=901, allocated_at=dt, released_at=dt)
+        self.db.add(b1)
+        self.db.commit()
+
+        b2 = BedAllocation(bed_id=901, case_id=901, allocated_at=dt, released_at=None)
+        self.db.add(b2)
+        with self.assertRaises(IntegrityError):
+            self.db.commit()
+        self.db.rollback()
 
 
 if __name__ == "__main__":

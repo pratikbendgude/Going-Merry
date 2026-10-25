@@ -22,6 +22,7 @@ from app.models import (
     Bed,
     VentilatorAllocation,
     Ventilator,
+    utcnow_second,
 )
 from app.schemas import (
     Transfer as TransferSchema,
@@ -98,6 +99,13 @@ def create_transfer(
         if not case:
             raise HTTPException(status_code=404, detail=f"Emergency case ID {transfer_in.case_id} not found")
 
+        # Validate that the emergency case belongs to the source hospital
+        if case.hospital_id != transfer_in.from_hospital_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Emergency case {transfer_in.case_id} belongs to hospital {case.hospital_id}, not source hospital {transfer_in.from_hospital_id}",
+            )
+
         # Check for existing active transfer for this case
         active_case_transfer = db.query(Transfer).filter(
             Transfer.case_id == transfer_in.case_id,
@@ -159,7 +167,7 @@ def create_transfer(
             ambulance_id=transfer_in.ambulance_id,
             shortage_reason=transfer_in.shortage_reason,
             status="requested",
-            requested_at=datetime.utcnow(),
+            requested_at=utcnow_second(),
             completed_at=None,
         )
         db.add(db_transfer)
@@ -238,13 +246,23 @@ def complete_transfer(transfer_id: int, db: Session = Depends(get_db)):
         if not transfer:
             raise HTTPException(status_code=404, detail="Transfer not found")
 
-        if transfer.status in ("completed", "cancelled"):
+        if transfer.status == "completed":
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot complete transfer that is already {transfer.status}",
+                detail="Cannot complete transfer that is already completed",
+            )
+        if transfer.status == "cancelled":
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot complete transfer that is already cancelled",
+            )
+        if transfer.status not in ("in_progress", "in_transit"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot complete transfer with status '{transfer.status}'. Only 'in_progress' transfers can be completed.",
             )
 
-        now = datetime.utcnow()
+        now = utcnow_second()
         transfer.status = "completed"
         transfer.completed_at = now
 
@@ -328,7 +346,7 @@ def cancel_transfer(transfer_id: int, db: Session = Depends(get_db)):
                 detail=f"Cannot cancel transfer that is already {transfer.status}",
             )
 
-        now = datetime.utcnow()
+        now = utcnow_second()
         transfer.status = "cancelled"
         transfer.completed_at = now
 

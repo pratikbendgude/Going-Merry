@@ -16,6 +16,7 @@ from app.models import (
     Ventilator,
     Ambulance,
     BloodUnit,
+    utcnow_second,
 )
 
 # Standard resource type mappings
@@ -126,7 +127,7 @@ def sync_resource_availability(
     if record:
         record.total_count = total
         record.available_count = available
-        record.last_updated = datetime.utcnow()
+        record.last_updated = utcnow_second()
         return record
     else:
         # Check if an existing record is already staged in the active session
@@ -140,7 +141,7 @@ def sync_resource_availability(
             staged_rec = staged_records[0]
             staged_rec.total_count = total
             staged_rec.available_count = available
-            staged_rec.last_updated = datetime.utcnow()
+            staged_rec.last_updated = utcnow_second()
             return staged_rec
 
         # Create record safely with staged-aware manual ID calculation if table lacks auto_increment
@@ -165,7 +166,7 @@ def sync_resource_availability(
             resource_type=target_type,
             total_count=total,
             available_count=available,
-            last_updated=datetime.utcnow(),
+            last_updated=utcnow_second(),
         )
         db.add(record)
         return record

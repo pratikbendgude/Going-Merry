@@ -11,7 +11,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Bed, Ventilator, Ambulance, BloodUnit, Hospital, EmergencyCase
+from app.models import (
+    Bed,
+    Ventilator,
+    Ambulance,
+    BloodUnit,
+    Hospital,
+    EmergencyCase,
+    BedAllocation,
+    VentilatorAllocation,
+    Dispatched,
+    Transfer,
+    utcnow_second,
+)
 from app.schemas import (
     Bed as BedSchema,
     BedCreate,
@@ -91,6 +103,17 @@ def update_bed_status(
     if not db_bed:
         raise HTTPException(status_code=404, detail="Bed not found")
 
+    if new_status == "available":
+        active_alloc = db.query(BedAllocation).filter(
+            BedAllocation.bed_id == bed_id,
+            BedAllocation.released_at.is_(None),
+        ).first()
+        if active_alloc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot mark bed {bed_id} as available while active allocation exists (case_id: {active_alloc.case_id})",
+            )
+
     db_bed.status = new_status
     sync_resource_availability(db, db_bed.hospital_id, "beds")
     if db_bed.bed_type == "icu":
@@ -158,6 +181,17 @@ def update_ventilator_status(
     db_vent = db.query(Ventilator).filter(Ventilator.ventilator_id == ventilator_id).with_for_update().first()
     if not db_vent:
         raise HTTPException(status_code=404, detail="Ventilator not found")
+
+    if new_status == "available":
+        active_alloc = db.query(VentilatorAllocation).filter(
+            VentilatorAllocation.ventilator_id == ventilator_id,
+            VentilatorAllocation.released_at.is_(None),
+        ).first()
+        if active_alloc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot mark ventilator {ventilator_id} as available while active allocation exists (case_id: {active_alloc.case_id})",
+            )
 
     db_vent.status = new_status
     sync_resource_availability(db, db_vent.hospital_id, "ventilators")
@@ -228,6 +262,27 @@ def update_ambulance_status(
     db_amb = db.query(Ambulance).filter(Ambulance.ambulance_id == ambulance_id).with_for_update().first()
     if not db_amb:
         raise HTTPException(status_code=404, detail="Ambulance not found")
+
+    if new_status == "available":
+        active_disp = db.query(Dispatched).filter(
+            Dispatched.ambulance_id == ambulance_id,
+            Dispatched.arrived_at.is_(None),
+        ).first()
+        if active_disp:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot mark ambulance {ambulance_id} as available while active dispatch exists (case_id: {active_disp.case_id})",
+            )
+
+        active_transfer = db.query(Transfer).filter(
+            Transfer.ambulance_id == ambulance_id,
+            Transfer.status.in_(["requested", "in_transit", "in_progress"]),
+        ).first()
+        if active_transfer:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot mark ambulance {ambulance_id} as available while assigned to active transfer {active_transfer.transfer_id} (status: {active_transfer.status})",
+            )
 
     db_amb.status = new_status
     sync_resource_availability(db, db_amb.hospital_id, "ambulances")
@@ -331,7 +386,7 @@ def issue_blood_unit(
         # Issue the unit
         unit.status = "issued"
         unit.case_id = issue_req.case_id
-        unit.issued_at = datetime.utcnow()
+        unit.issued_at = utcnow_second()
 
         sync_resource_availability(db, unit.hospital_id, "blood_units")
         log_audit(db, unit.hospital_id, "Blood_Units", unit.unit_id, "UPDATE")
