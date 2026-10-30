@@ -66,3 +66,37 @@ if __name__ == "__main__":
     arr = [3, 1, 3]
     ans = findTwoElement(arr)
     print(ans[0], ans[1])
+
+
+
+
+
+
+"""Making Two Equations - O(n) Time and O(1) Space"""
+def findTwoElement(arr):
+    n = len(arr)
+
+    # Expected sum and sum of squares for numbers from 1 to n
+    s = (n * (n + 1)) // 2
+    ssq = (n * (n + 1) * (2 * n + 1)) // 6
+
+    missing = 0
+    repeating = 0
+
+    # Subtract actual sum and sum of squares from expected values
+    for num in arr:
+        s -= num
+        ssq -= num * num
+
+    # Let s = x - y and ssq = x^2 - y^2 = (x - y)(x + y)
+    # => x = (s + ssq // s) // 2, y = x - s
+    missing = (s + ssq // s) // 2
+    repeating = missing - s
+
+    return [repeating, missing]
+
+if __name__ == "__main__":
+    arr = [3, 1, 3]
+    ans = findTwoElement(arr)
+    
+    print(ans[0], ans[1])
