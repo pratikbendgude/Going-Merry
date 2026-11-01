@@ -100,3 +100,64 @@ if __name__ == "__main__":
     ans = findTwoElement(arr)
     
     print(ans[0], ans[1])
+
+
+
+
+"""XOR - O(n) Time and O(1) Space
+The idea is to use XOR operations to isolate the missing and repeating numbers.
+
+    XOR all array elements with numbers from 1 to n.
+    The non-repeating elements cancel out, leaving X ⊕ Y, where X and Y are the missing and repeating numbers.
+    Use any set bit in X ⊕ Y to divide the numbers into two groups. A set bit means X and Y have different bits at that position.
+    XOR the elements in each group to find the missing and repeating numbers
+"""
+def findTwoElement(arr):
+    n = len(arr)
+    xorVal = 0  
+
+    # get the xor of all array elements
+    # And numbers from 1 to n
+    for i in range(n):
+        xorVal ^= arr[i]
+        xorVal ^= (i + 1)  # 1 to n numbers
+
+    # get the rightmost set bit in xorVal
+    setBitIndex = xorVal & ~(xorVal - 1)
+    
+    x, y = 0, 0
+
+    # now divide elements into two sets 
+    # by comparing rightmost set bit
+    for i in range(n):
+      
+        # decide whether arr[i] is in first set 
+        # or second
+        if arr[i] & setBitIndex: 
+            x ^= arr[i] 
+        else: 
+            y ^= arr[i]
+      
+        # decide whether (i+1) is in first set 
+        # or second
+        if (i + 1) & setBitIndex: 
+            x ^= (i + 1) 
+        else: 
+            y ^= (i + 1)
+
+    # x and y are the repeating and missing values.
+    # to know which one is what, traverse the array 
+    xCnt = sum(1 for num in arr if num == x)
+    
+    if xCnt == 0:
+        missing, repeating = x, y
+    else:
+        missing, repeating = y, x
+
+    return [repeating, missing]
+
+if __name__ == "__main__":
+    arr = [3, 1, 3]
+    ans = findTwoElement(arr)
+
+    print(ans[0], ans[1])
