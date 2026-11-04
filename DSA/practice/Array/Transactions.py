@@ -28,3 +28,41 @@ def maxProfit(prices):
 if __name__ == "__main__":
     prices = [100, 180, 260, 310, 40, 535, 695]
     print(maxProfit(prices))
+
+
+
+
+
+"""[Better Approach] Using Local Minima and Maxima - O(n) Time and O(1) Space
+The idea is to traverse the array from left to right and 
+Find local minima (where price starts rising) and then a local maxima (where price stops rising). 
+Compute the difference between two and add to the result. 
+"""
+
+def maxProfit(prices):
+    n = len(prices)
+    lMin = prices[0]  
+    lMax = prices[0]  
+    res = 0
+  
+    i = 0
+    while i < n - 1:
+      
+        # Find local minima
+        while i < n - 1 and prices[i] >= prices[i + 1]:
+            i += 1
+        lMin = prices[i]
+        
+        # Local Maxima
+        while i < n - 1 and prices[i] <= prices[i + 1]:
+            i += 1
+        lMax = prices[i]
+      
+        # Add current profit
+        res += (lMax - lMin)
+  
+    return res
+
+if __name__ == "__main__":
+    prices = [100, 180, 260, 310, 40, 535, 695]
+    print(maxProfit(prices))
