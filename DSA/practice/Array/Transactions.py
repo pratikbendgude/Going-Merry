@@ -66,3 +66,31 @@ def maxProfit(prices):
 if __name__ == "__main__":
     prices = [100, 180, 260, 310, 40, 535, 695]
     print(maxProfit(prices))
+
+
+
+
+
+"""[Expected Approach] By Accumulating Profit - O(n) Time and O(1) Space
+
+The idea is that profit only comes when prices rise. 
+If the price goes up from one day to the next, we can think of it as buying yesterday and selling today.
+Instead of waiting for the exact bottom and top, we simply grab every small upward move. 
+Adding these small gains together is the same as if we had bought at each valley and sold at 
+each peak because every rise between them gets counted.
+"""
+
+def maxProfit(prices):
+    res = 0
+
+    # Keep on adding the difference between
+    # adjacent when the prices a
+    for i in range(1, len(prices)):
+        if prices[i] > prices[i - 1]:
+            res += prices[i] - prices[i - 1]
+
+    return res
+
+if __name__ == "__main__":
+    prices = [100, 180, 260, 310, 40, 535, 695]
+    print(maxProfit(prices))
