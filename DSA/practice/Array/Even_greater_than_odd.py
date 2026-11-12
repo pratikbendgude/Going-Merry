@@ -28,3 +28,40 @@ def rearrangeArray(arr):
 arr = [1, 2, 2, 1]
 res = rearrangeArray(arr)
 print(res)
+
+
+
+
+
+
+
+"""[Approach 2] - Rearranging array by swapping elements"""
+
+def rearrangeArray(arr):
+    n = len(arr)
+
+    # Traverse the array and make adjustments to satisfy the condition
+    for i in range(1, n):
+
+        # Check if the index is even (1-based), i.e., i+1 is even
+        if (i + 1) % 2 == 0:
+            # Ensure that the current element is greater than
+            # or equal to the previous element
+            if arr[i] < arr[i - 1]:
+                arr[i], arr[i - 1] = arr[i - 1], arr[i]
+        else:
+            # Ensure that the current element is less than or
+            # equal to the previous element
+            if arr[i] > arr[i - 1]:
+                arr[i], arr[i - 1] = arr[i - 1], arr[i]
+
+    return arr
+
+
+if __name__ == "__main__":
+
+    inputArray = [1, 2, 2, 1]
+
+    resultArray = rearrangeArray(inputArray)
+
+    print(" ".join(map(str, resultArray)))
