@@ -44,3 +44,38 @@ arr = [12, 11, 10, 5, 6, 2, 30]
 res = find3Numbers(arr)
 for x in res:
     print(x, end=' ')
+
+
+
+
+"""[Expected Approach] - O(n) Time and O(1) Space"""
+def find3Numbers(arr):
+    n = len(arr)
+    if n < 3:
+        return []
+
+    first = float('inf')
+    second = float('inf')
+    prevFirst = float('inf')
+
+    # Iterating through the array
+    for i in range(n):
+        x = arr[i]
+
+        # Updating first and second smallest numbers
+        if x <= first:
+            first = x
+        elif x <= second:
+            second = x
+            prevFirst = first
+        # If a third number greater than first and second is found
+        else:
+            return [prevFirst, second, x]
+
+    return []
+
+# driver code
+arr = [12, 11, 10, 5, 6, 2, 30]
+res = find3Numbers(arr)
+for x in res:
+    print(x, end=" ")
